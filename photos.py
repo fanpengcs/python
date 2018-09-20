@@ -37,11 +37,11 @@ class mzitu():
 
     def mkdir(self, path): ##创建文件夹
         path = path.strip()
-        isExists = os.path.exists(os.path.join("E:\mzitu2", path))
+        isExists = os.path.exists(os.path.join(r"E:\mzitu2", path))
         if not isExists:
             print('建了一个名字叫做', path, '的文件夹！')
-            os.makedirs(os.path.join("E:\mzitu2", path))
-            os.chdir(os.path.join("E:\mzitu2", path)) ##切换到目录
+            os.makedirs(os.path.join(r"E:\mzitu2", path))
+            os.chdir(os.path.join(r"E:\mzitu2", path)) ##切换到目录
             return True
         else:
             print( path, '文件夹已经存在了！')
@@ -57,7 +57,8 @@ class mzitu():
 #设置启动函数
 def main():
     Mzitu = mzitu() ##实例化
-    Mzitu.all_url('http://www.mzitu.com/all') ##给函数all_url传入参数  
+    Mzitu.all_url('http://www.mzitu.com/all') ##给函数all_url传入参数
+    input('Press the enter key to exit.')
 
-if __name__ == "__name__":
+if __name__ == "__main__":
     main()
