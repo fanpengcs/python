@@ -2,30 +2,52 @@
 import requests
 from bs4 import BeautifulSoup
 import os
+import bs4
 #导入所需要的模块
 class mzitu():
+    """ 抓取图片 """
+    rootPwd = os.getcwd()
+    rootPwd = os.path.join(rootPwd, "mzitu")
+
+    def print(self, log):
+        log_path = os.path.join(self.__class__.rootPwd, "log")
+        isExists = os.path.exists(log_path)
+        if not isExists:
+            os.makedirs(log_path)
+        f = open(log_path + '\\mzitu.log', 'at')
+        f.write(log)
+        f.write("\n")
+        f.close()
+        print(log)
+
     def all_url(self, url):
-        html = self.request(url)##
-        all_a = BeautifulSoup(html.text, 'lxml').find('div', class_='all').find_all('a')
-        for a in all_a:
-            title = a.get_text()
-            print('------开始保存：', title) 
-            path = str(title).replace("?", '_') ##替换掉带有的？
-            self.mkdir(path) ##调用mkdir函数创建文件夹！这儿path代表的是标题title
-            href = a['href']
-            self.html(href) 
+        html = self.request(url)
+        div_all = BeautifulSoup(html.text, 'lxml').find('div', class_='all')
+        if isinstance(div_all, bs4.element.Tag):
+            all_a = div_all.find_all('a')
+            for a in all_a:
+                title = a.get_text()
+                self.print('------开始保存：%s' %title) 
+                path = str(title).replace("?", '_') ##替换掉带有的？
+                self.mkdir(path) ##调用mkdir函数创建文件夹！这儿path代表的是标题title
+                href = a['href']
+                self.html(href) 
 
     def html(self, href):   ##获得图片的页面地址
         html = self.request(href)
-        max_span = BeautifulSoup(html.text, 'lxml').find('div', class_='pagenavi').find_all('span')[-2].get_text()
-        #这个上面有提到
-        for page in range(1, int(max_span) + 1):
-            page_url = href + '/' + str(page)
-            self.img(page_url) ##调用img函数
+        pagenavi = BeautifulSoup(html.text, 'lxml').find('div', class_='pagenavi')
+        if isinstance(pagenavi, bs4.element.Tag):
+            max_span = pagenavi.find_all('span')[-2].get_text()
+            for page in range(1, int(max_span) + 1):
+                page_url = href + '/' + str(page)
+                self.img(page_url) ##调用img函数
 
     def img(self, page_url): ##处理图片页面地址获得图片的实际地址
         img_html = self.request(page_url)
-        img_url = BeautifulSoup(img_html.text, 'lxml').find('div', class_='main-image').find('img')['src']
+        try:
+            img_url = BeautifulSoup(img_html.text, 'lxml').find('div', class_='main-image').find('img')['src']
+        except:
+            self.print("img_url error!!!")
         self.save(img_url)
 
     def save(self, img_url): ##保存图片
@@ -37,15 +59,15 @@ class mzitu():
 
     def mkdir(self, path): ##创建文件夹
         path = path.strip()
-        isExists = os.path.exists(os.path.join(r"E:\mzitu2", path))
+        all_path = os.path.join(self.__class__.rootPwd, path)
+        isExists = os.path.exists(all_path)
         if not isExists:
-            print('建了一个名字叫做', path, '的文件夹！')
-            os.makedirs(os.path.join(r"E:\mzitu2", path))
-            os.chdir(os.path.join(r"E:\mzitu2", path)) ##切换到目录
-            return True
+            os.makedirs(all_path)
+            os.chdir(all_path) ##切换到目录
+            self.print('建了一个名字叫做 %s 的文件夹！' %all_path)
         else:
-            print( path, '文件夹已经存在了！')
-            return False
+            self.print('%s文件夹已经存在了！' %all_path)
+            self.mkdir("{0}_1".format(path))
 
     def request(self, url): ##这个函数获取网页的response 然后返回
         headers = {
@@ -54,6 +76,7 @@ class mzitu():
         }
         content = requests.get(url, headers=headers)
         return content
+    
 #设置启动函数
 def main():
     Mzitu = mzitu() ##实例化

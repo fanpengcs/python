@@ -25,13 +25,13 @@ def main():
     }
     req = MyRequests()
     re = req.get_url(url, headers=headers)
-    print(type(re))
-    print(re.status_code)
-    print(type(re.text))
-    print(re.text)
-    print(re.cookies)
-    print(re.content)
-    print(re.content.decode("utf-8"))
+    print("retype:%s\n" %(type(re)))
+    print("status_code:%s\n" %(re.status_code))
+    print("texttype:%s\n" %(type(re.text)))
+    print("text:%s\n" %(re.text))
+    print("cookies:%s\n" %(re.cookies))
+    print("content:%s\n" %(re.content))
+    print("decode:%s\n" %(re.content.decode("utf-8")))
 
 if ("__main__"==__name__):
     main()
