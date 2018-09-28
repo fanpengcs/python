@@ -48,7 +48,8 @@ class mzitu():
             img_url = BeautifulSoup(img_html.text, 'lxml').find('div', class_='main-image').find('img')['src']
         except:
             self.print("img_url error!!!")
-        self.save(img_url)
+        finally:
+            self.save(img_url)
 
     def save(self, img_url): ##保存图片
         name = img_url[-9:-4]
