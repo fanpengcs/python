@@ -1,37 +1,79 @@
-    
+import os
 import requests
 from bs4 import BeautifulSoup
-import os
 import bs4
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+import pickle
+import my_log
 #导入所需要的模块
-class mzitu():
-    """ 抓取图片 """
-    rootPwd = os.getcwd()
-    rootPwd = os.path.join(rootPwd, "mzitu")
 
-    def print(self, log):
+class Extract():
+    """ 多线程 抓取图片 """
+    
+    #全局变量
+    rootPwd = os.path.join(os.getcwd(), "Extract")
+    save_last = None
+    save_last = rootPwd + '\\save_last'
+
+    class SaveItem:
+        def __init__(self):
+            self.save_num = 0
+            self.save_urls = []
+
+    def __init__(self):
+        #初始化目录
+        self.mkdir(self.rootPwd)
+        #初始化日志
         log_path = os.path.join(self.__class__.rootPwd, "log")
-        isExists = os.path.exists(log_path)
-        if not isExists:
-            os.makedirs(log_path)
-        f = open(log_path + '\\mzitu.log', 'at')
-        f.write(log)
-        f.write("\n")
-        f.close()
-        print(log)
+        self.mkdir(log_path)
+        log_path += '\\extract.log'
+        self.log = my_log.Logger(log_path, "debug")
+        #初始化线程池
+        self.executor = ThreadPoolExecutor(max_workers=10)
+        #加载以保存url
+        self.save_urls = self.__class__.SaveItem()
+        try:
+            with open(self.__class__.save_last, 'rb') as save:
+                self.save_urls = pickle.load(save)
+        except:
+            self.log.logger.debug("not find save_last")
 
-    def all_url(self, url):
+    def extract_all(self, url):
         html = self.request(url)
         div_all = BeautifulSoup(html.text, 'lxml').find('div', class_='all')
         if isinstance(div_all, bs4.element.Tag):
             all_a = div_all.find_all('a')
-            for a in all_a:
-                title = a.get_text()
-                self.print('------开始保存：%s' %title) 
-                path = str(title).replace("?", '_') ##替换掉带有的？
-                self.mkdir(path) ##调用mkdir函数创建文件夹！这儿path代表的是标题title
-                href = a['href']
-                self.html(href) 
+            #去除保存
+            do_a = []
+            for a_item in all_a:
+                print(self.save_urls)
+                print(type(self.save_urls))
+                if a_item in self.save_urls.save_urls:
+                    self.log.logger.debug('%s---已经保存---' %(a_item.get_text(), a_item['href']))
+                    continue
+                do_a.append(a_item)
+
+            self.tasks = {self.executor.submit(self.all_url, a): a for a in do_a} 
+            for future in concurrent.futures.as_completed(self.tasks):
+                url = self.tasks[future]
+                try:
+                    data = future.result()
+                except Exception as err:
+                    self.log.logger.debug('%r generated an exception: %s' % (url, err))
+                else:
+                    self.log.logger.debug('%s --- %r--- done:%s' % (data, url, future.done()))
+
+
+    def all_url(self, a):
+        title = a.get_text()
+        self.log.logger.debug('------开始保存：%s' %title) 
+        path = str(title).replace("?", '_')
+        self.mkdir(path)
+        href = a['href']
+        self.html(href)
+        self.save_urls.save_urls.append(a)
+        return " ------目录保存完成" + path
 
     def html(self, href):   ##获得图片的页面地址
         html = self.request(href)
@@ -48,16 +90,18 @@ class mzitu():
         try:
             img_url = BeautifulSoup(img_html.text, 'lxml').find('div', class_='main-image').find('img')['src']
         except:
-            self.print("img_url error!!!")
+            self.log.logger.debug("img_url error!!!")
         else:
             self.save(img_url)
 
     def save(self, img_url): ##保存图片
         name = img_url[-9:-4]
         img = self.request(img_url)
-        f = open(name + '.jpg', 'ab')
-        f.write(img.content)
-        f.close()
+        with open(name + '.jpg', 'ab') as f:
+            f.write(img.content)
+            f.close()
+            self.save_urls.save_num+=1
+            self.log.logger.debug('------ %s--保存完成 %d 张' %(name, self.save_urls.save_num))
 
     def mkdir(self, path): ##创建文件夹
         path = path.strip()
@@ -65,12 +109,8 @@ class mzitu():
         isExists = os.path.exists(all_path)
         if not isExists:
             os.makedirs(all_path)
-            os.chdir(all_path) ##切换到目录
-            self.print('建了一个名字叫做 %s 的文件夹！' %all_path)
-        else:
-            self.print('%s文件夹已经存在了！' %all_path)
-            self.mkdir("{0}_1".format(path))
-
+        os.chdir(all_path) ##切换到目录
+     
     def request(self, url): ##这个函数获取网页的response 然后返回
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.110 Safari/537.36',
@@ -79,10 +119,17 @@ class mzitu():
         content = requests.get(url, headers=headers)
         return content
     
-#设置启动函数
 def main():
-    Mzitu = mzitu() ##实例化
-    Mzitu.all_url('http://www.mzitu.com/all') ##给函数all_url传入参数
+    extract = Extract()
+    extract.extract_all('http://www.mzitu.com/all')
+    # try:
+    #     extract.extract_all('http://www.mzitu.com/all')
+    # except Exception as err:
+    #     extract.log.logger.debug(err)
+    # finally:
+    #     with open(extract.save_last, 'wb') as save:
+    #         pickle.dump(extract.save_urls, save)
+
     input('Press the enter key to exit.')
 
 if __name__ == "__main__":
