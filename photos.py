@@ -44,11 +44,12 @@ class mzitu():
 
     def img(self, page_url): ##处理图片页面地址获得图片的实际地址
         img_html = self.request(page_url)
+        img_url = 0
         try:
             img_url = BeautifulSoup(img_html.text, 'lxml').find('div', class_='main-image').find('img')['src']
         except:
             self.print("img_url error!!!")
-        finally:
+        else:
             self.save(img_url)
 
     def save(self, img_url): ##保存图片
