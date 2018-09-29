@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 from bs4 import BeautifulSoup
 import bs4
@@ -6,11 +7,12 @@ from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 import pickle
 import my_log
-#导入所需要的模块
 
 class Extract():
-    """ 多线程 抓取图片 """
-    
+    """ 多线程 抓取图片
+    pickle 可序列化python原生对象
+    ThreadPoolExecutor 线程池
+    """
     #全局变量
     rootPwd = os.path.join(os.getcwd(), "Extract")
     save_last = None
@@ -30,12 +32,13 @@ class Extract():
         log_path += '\\extract.log'
         self.log = my_log.Logger(log_path, "debug")
         #初始化线程池
-        self.executor = ThreadPoolExecutor(max_workers=10)
+        self.executor = ThreadPoolExecutor(max_workers=20)
         #加载以保存url
         self.save_urls = self.__class__.SaveItem()
         try:
             with open(self.__class__.save_last, 'rb') as save:
                 self.save_urls = pickle.load(save)
+                save.close()
         except:
             self.log.logger.debug("not find save_last")
 
@@ -46,13 +49,14 @@ class Extract():
             all_a = div_all.find_all('a')
             #去除保存
             do_a = []
-            for a_item in all_a:
-                print(self.save_urls)
-                print(type(self.save_urls))
-                if a_item in self.save_urls.save_urls:
-                    self.log.logger.debug('%s---已经保存---' %(a_item.get_text(), a_item['href']))
-                    continue
-                do_a.append(a_item)
+            if self.save_urls.save_num == 0:
+                do_a = all_a[:5]
+            else:
+                for a_item in all_a:
+                    if a_item['href'] in self.save_urls.save_urls:
+                        self.log.logger.debug('------已经保存---%s---%s' %(a_item.get_text(), a_item['href']))
+                        continue
+                    do_a.append(a_item)
 
             self.tasks = {self.executor.submit(self.all_url, a): a for a in do_a} 
             for future in concurrent.futures.as_completed(self.tasks):
@@ -72,7 +76,7 @@ class Extract():
         self.mkdir(path)
         href = a['href']
         self.html(href)
-        self.save_urls.save_urls.append(a)
+        self.save_urls.save_urls.append(a['href'])
         return " ------目录保存完成" + path
 
     def html(self, href):   ##获得图片的页面地址
@@ -90,7 +94,7 @@ class Extract():
         try:
             img_url = BeautifulSoup(img_html.text, 'lxml').find('div', class_='main-image').find('img')['src']
         except:
-            self.log.logger.debug("img_url error!!!")
+            self.log.logger.debug(" %s img_url error!!!" %img_html.text)
         else:
             self.save(img_url)
 
@@ -120,17 +124,20 @@ class Extract():
         return content
     
 def main():
+    sys.setrecursionlimit(1000000)  # set the maximum depth as 1000000
     extract = Extract()
-    extract.extract_all('http://www.mzitu.com/all')
-    # try:
-    #     extract.extract_all('http://www.mzitu.com/all')
-    # except Exception as err:
-    #     extract.log.logger.debug(err)
-    # finally:
-    #     with open(extract.save_last, 'wb') as save:
-    #         pickle.dump(extract.save_urls, save)
-
-    input('Press the enter key to exit.')
+    try:
+        extract.extract_all('http://www.mzitu.com/all')
+    except Exception as err:
+        extract.log.logger.debug(err)
+    finally:
+        with open(extract.save_last, 'wb') as save:
+            print(extract.save_urls.save_urls)
+            saves = extract.save_urls
+            pickle.dump(saves, save)
+            save.close()
+            extract.log.logger.debug("done save save_last")
+        #input('Press the enter key to exit.')
 
 if __name__ == "__main__":
     main()
