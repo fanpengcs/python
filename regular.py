@@ -1,6 +1,12 @@
 import re
 
 import math as MH
+
+content = r'<?xml version="1.0" encoding="GB2312"?>'
+charset = re.compile(".*\s*encoding=\"([^\"]+)\".*", re.M).match(content)
+
+print(charset.group(0))
+print(charset.group(1))
 # m = re.match(r'(\w+) (\w+)(?P<sign>.*)', 'hello world!')
  
 # print ("m.string:", m.string)
