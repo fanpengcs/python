@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+注意：xml配置文件只能有一个父节点，否则会解析失败。
+-->
+<Config>
+	<version>10000</version>
+	<version1>10000:10003</version1>
+	
+	<structName var1="10001" var2="10002">
+		<vector var="exampleVector">
+			<example exam1="1" exam2="2" exam3="a|1110:b|2220:c|3330"/>
+			<example exam1="3" exam2="4" exam3="d|1111:e|2222:f|3333"/>
+		</vector>
+		<map var="exampleMap" key="itemid">
+			<item itemid="5" itemvar1="7" itemvar2="ma|11100:mb|22200:mc|33300"/>
+			<item itemid="6" itemvar1="8" itemvar2="ma|11101:mb|22201:mc|33301"/>
+		</map>
+		<vector var="firstVector">
+			<example exam1="qwe" exam2="eqw" exam3="a|1110:b|2220:c|3330">
+				<map var="exMap" key="id">
+					<mapitem id="11" va="123" vb="asd" vc="嵌套容器1"/>
+					<mapitem id="12" va="321" vb="dsa" vc="嵌套容器2"/>
+					<mapitem id="13" va="213" vb="das" vc="嵌套容器3"/>
+				</map>
+			</example>
+			<example exam1="zcx" exam2="zcc" exam3="a|1110:b|2220:c|3330">
+				<map var="exMap" key="id">
+					<mapitem id="111" va="1123" vb="1asd" vc="1嵌套容器1"/>
+					<mapitem id="112" va="1321" vb="1dsa" vc="1嵌套容器2"/>
+					<mapitem id="113" va="1213" vb="1das" vc="1嵌套容器3"/>
+				</map>
+			</example>
+		</vector>
+	</structName>
+</Config>

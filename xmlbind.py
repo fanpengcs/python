@@ -3,6 +3,7 @@
 
 from xml.dom import minidom
 import xlrd, os, sys, re, getopt
+from chardet import detect
 
 field_name_row = 0
 var_name_row = 1
@@ -10,14 +11,22 @@ type_name_row = 2
 data_begin_row = 3
 namespace = "xmlConfig"
 struct_name_suffix = "_t"
-cpp_var_type = "Fir::XMLParser"
+cpp_var_type = "Fir::VarType"
 cpp_xmlparser_no_const = "Fir::XMLParser"
 cpp_xmlparser = "const Fir::XMLParser"
 cpp_xmlparser_node = "const Fir::XMLParser::Node"
+write_coding = "UTF-8"
 
-def file_ext_name(*endstring):
-    def run(s):
-        f = map(s.endswith, endstring)
+'''
+# 第一个参数为函数，第二个参数为列表 依次遍历 第二个参数 为第一个函数的参数
+def square(x) :  return x ** 2
+map(square, [1,2,3,4,5])   # 计算列表各个元素的平方
+map(lambda x, y: x + y, [1, 3, 5, 7, 9], [2, 4, 6, 8, 10])
+map(lambda x: x ** 2, [1, 2, 3, 4, 5])  # 使用 lambda 匿名函数
+'''
+def file_ext_name(*endstring): # *endstring 多个参数
+    def run(s): # 匿名函数 闭包
+        f = list(map(s.endswith, endstring)) 
         if True in f:
              return s
     return run
@@ -27,17 +36,33 @@ def get_file_name(filename):
     fname, extname = os.path.splitext(fname)
     return fname
 
-def read_xml(fname):
-    fp = open(fname, "r")
-    content = fp.read()
-    fp.close()
+'''
+open函数如果不用二进制方式打开，同时不指定编码或者指定编码错误，会有可能报错
     try:
         charset = re.compile(".*\s*encoding=\"([^\"]+)\".*", re.M).match(content).group(1)
     except:
-        charset = "UTF-8"
-    if charset.upper != "UTF-8":
-        content = re.sub(charset, "UTF-8", content)
-        content = content.decode(charset).encoding("UTF-8")
+        charset = write_coding
+    if charset.upper != write_coding:
+        content = re.sub(charset, write_coding, content)
+        content = content.decode(charset).encoding(write_coding)
+'''
+# 读取文件并返回xml结构
+def read_xml(fname):
+    fp = open(fname, "rb")
+    content = fp.read()
+    fp.close()
+    try:
+        charset = detect(content)["encoding"]
+    except:
+        charset = write_coding
+    try:
+        print(content)
+        content = content.decode(charset.upper())
+        print(content)
+    except:
+        if charset.upper() != write_coding:
+            print("detect%s猜测解码失败,默认尝试%s解码" %(detect(content), write_coding))
+            content = content.decode(charset.upper())
     return minidom.parseString(content)
 
 def create_load_vector_func(tab_char):
@@ -93,22 +118,22 @@ def create_define_file(out_dir, struct_code):
     code += "}\n\n"
     code += "#endif\n\n"
     filename = os.path.join(out_dir, "xmlconfig_define.h")
-    fp = file(filename, "wb")
-    fp.write(code)
+    fp = open(filename, "wb")
+    fp.write(code.encode(write_coding))
     fp.close()
 
 def create_code(out_dir, xmlfiles):
     func_declare = ""
     struct_declare = ""
     func_define = ""
-    struct_load =""
+    struct_load = ""
     for xmlname in xmlfiles:
         func_declare += "\tconst {0}{1} &{0}();\n".format(xmlname, struct_name_suffix)
         func_declare += "\tbool reset{0}(const {1}::ReadXmlFunc &func);\n\n".format(xmlname, namespace)
         struct_declare += "\tstatic {0}{1} *_{0} = NULL;\n".format(xmlname, struct_name_suffix)
-        func_declare += "\tconst {0}{1} &{0}90 {{\n\t\treturn *_{0};\n\t}}\n".format(xmlname, struct_name_suffix)
-        func_declare += "\tbool reset{0}(const {1}::ReadXmlFunc &func) {{\n\t\t{2} xml;\n\t\tif (_{0}) {{\n\t\t\tdelete _{0};\n\t\t\t_{0} = NULL;\n\t\t_{0} = new {0}{3};\n\t\t_){0}->load(xml, \"{0}.xml\"));\n\t\tZebra::logger->debug(\"[XML配置] 加载 {0}.xml 成功\");\n\t\treturn true;\n\t}}\n\n".format(xmlname, namespace, cpp_xmlparser_no_const, struct_name_suffix)
-        struct_load += "\t\tif (_{0}) {{\n\t\tdelete _{0};\n\t\t\t_{0} = NULL;\n\t\t}}\n\t\t_{0} = new {0}{1};\n\t\t_{0}->load(xml, func(xml, \"{0}.xml\"));\n\tZerbra::logger->debug(\"[XML配置], 加载 {0}.xml 成功\");\n".format(xmlname, struct_name_suffix)
+        func_define += "\tconst {0}{1} &{0}() {{\n\t\treturn *_{0};\n\t}}\n".format(xmlname, struct_name_suffix)
+        func_define += "\tbool reset{0}(const {1}::ReadXmlFunc &func) {{\n\t\t{2} xml;\n\t\tif (_{0}) {{\n\t\t\tdelete _{0};\n\t\t\t_{0} = NULL;\n\t\t_{0} = new {0}{3};\n\t\t_{0}->load(xml, \"{0}.xml\"));\n\t\tZebra::logger->debug(\"[XML配置] 加载 {0}.xml 成功\");\n\t\treturn true;\n\t}}\n\n".format(xmlname, namespace, cpp_xmlparser_no_const, struct_name_suffix)
+        struct_load += "\t\tif (_{0}) {{\n\t\tdelete _{0};\n\t\t\t_{0} = NULL;\n\t\t}}\n\t\t_{0} = new {0}{1};\n\t\t_{0}->load(xml, func(xml, \"{0}.xml\"));\n\t\tZerbra::logger->debug(\"[XML配置], 加载 {0}.xml 成功\");\n".format(xmlname, struct_name_suffix)
         struct_load += "\t\tfileResetMap.insert(std::make_pair(\"{0}\", reset{0});\n".format(xmlname)
     # 生成.h
     code = ""
@@ -126,8 +151,8 @@ def create_code(out_dir, xmlfiles):
     code += "}\n\n"
     code += "#endif\n\n"
     filename = os.path.join(out_dir, "xmlconfig.h")
-    fp = file(filename, "wb")
-    fp.write(code)
+    fp = open(filename, "wb")
+    fp.write(code.encode(write_coding))
     fp.close()
 
     # 生成cpp
@@ -160,11 +185,14 @@ def create_code(out_dir, xmlfiles):
     code += func_define
     code += "}\n\n"
     filename = os.path.join(out_dir, "xmlconfig.cpp")
-    fp = file(filename, "wb")
-    fp.write(code)
+    fp = open(filename, "wb")
+    fp.write(code.encode(write_coding))
     fp.close()
 
-def create_struct(name, objects, tab_char, prefix)
+'''
+
+'''
+def create_struct(name, objects, tab_char, prefix):
     code = ""
     cpp = ""
     struct_list = objects["struct"]
@@ -172,30 +200,30 @@ def create_struct(name, objects, tab_char, prefix)
     code += tab_char + "struct {0}{1} {{\n".format(name, struct_name_suffix)
     if len(struct_list) > 0:
         code += tab_char + "\tpublic:\n"
-        for struct_name in sorted(struc_list):
+        for struct_name in sorted(struct_list):
             objs = struct_list[struct_name]
-        pre = ""
-        if prefix == "":
-            pre = name + "_t"
-        else:
-            pre = prefix + "::" + name + "_t"
-        co, cp = create_struct(struct_name, objs, tab_char+"\t\t", pre)
-        code += co
-        code += cp
+            pre = ""
+            if prefix == "":
+                pre = name + "_t"
+            else:
+                pre = prefix + "::" + name + "_t"
+            co, cp = create_struct(struct_name, objs, tab_char+"\t\t", pre)
+            code += co
+            cpp += cp
     if len(var_list) > 0:
         code += tab_char + "\tpublic:\n"
-    code += tab_char + "\t\tvoid load({0} &xml, {1} *node);\n".format(cpp_xmlparser, cpp_xmlparser_node)
-    cpp += "\tvoid "
-    fix = prefix
-    if len(fix) == 0:
-        fix = name + "_t" "::"
-    else:
-        fix += "::"+ name + "_t" + "::"
+        code += tab_char + "\t\tvoid load({0} &xml, {1} *node);\n".format(cpp_xmlparser, cpp_xmlparser_node)
+        cpp += "\tvoid "
+        fix = prefix
+        if len(fix) == 0:
+            fix = name + "_t" "::"
+        else:
+            fix += "::"+ name + "_t" + "::"
         cpp += fix + "load({0} &xml, {1} *node) {{\n".format(cpp_xmlparser, cpp_xmlparser_node)
         cpp += "\t\tif (!node)\n"
-    cpp += "\t\t\treturn;\n"
-    cpp += create_load_var_node(objects, "\t\t")
-    cpp += "\t\n"
+        cpp += "\t\t\treturn;\n"
+        cpp += create_load_var_code(objects, "\t\t")
+        cpp += "\t}\n"
         cpp += "\n"
         for var_name in sorted(var_list):
             var_type = var_list[var_name]
@@ -203,8 +231,8 @@ def create_struct(name, objects, tab_char, prefix)
                 var_type += struct_name_suffix
             code += tab_char + "\t\tconst {0} &{1}()const {{ return _{1}; }}\n".format(var_type, var_name)
         code += "\n"
-        cod += tab_char + "\tprivate:\n"
-        for var_name : sorted(var_list):
+        code += tab_char + "\tprivate:\n"
+        for var_name in sorted(var_list):
             var_type = var_list[var_name]
             if var_type in struct_list.keys():
                 var_type += struct_name_suffix
@@ -215,11 +243,11 @@ def create_struct(name, objects, tab_char, prefix)
 def create_load_map_code(var_name, var_type, objects, tab_char):
     code = ""
     struct_list = objects["struct"]
-    map_type = var_type[var_type.find(", ") + 2 : var_type.find(">")]
+    map_type = var_type[var_type.find(", ") + 2 : var_type.find(" >")]
     no_suffix = map_type[0 : -len(struct_name_suffix)]
     code += tab_char + "{1} *map_{0}_node = xml.child(node, \"map\");\n".format(var_name, cpp_xmlparser_node)
     code += tab_char + "while (map_{0}_node) {{\n".format(var_name)
-    code += tab_char + "\tif (xml.node_attribute(map_{1}_node, \"var\") == \"{0}\") {{\n".format(var_name)
+    code += tab_char + "\tif (xml.node_attribute(map_{0}_node, \"var\") == \"{0}\") {{\n".format(var_name)
     code += tab_char + "\t\t{0} keyname = xml.node_attribute(map_{1}_node, \"key\");\n".format(cpp_var_type, var_name)
     if no_suffix in struct_list.keys():
         map_type = no_suffix
@@ -236,11 +264,25 @@ def create_load_map_code(var_name, var_type, objects, tab_char):
         code += tab_char + "\t\t}\n"
     else:
         code += tab_char + "\t\t_{0} = error;\n".format(var_name)
-        print "暂不支持容器嵌套，请使用节点嵌套！！！ map：", var_name
+        print ("暂不支持容器嵌套，请使用节点嵌套！！！ map：", var_name)
     code += tab_char + "\t\tbreak;\n"
     code += tab_char + "\t}\n"
     code += tab_char + "\tmap_{0}_node = xml.next(map_{0}_node, \"map\");\n".format(var_name)
     code += tab_char + "}\n"
+    return code
+
+def create_load_vector_code(var_name, var_type, objects, tab_char):
+    code = ""
+    struct_list = objects["struct"]
+    vec_type = var_type[ var_type.find("<") + 2 : var_type.find(" >") ]
+    no_suffix = vec_type[ 0 : -len(struct_name_suffix) ]
+    if no_suffix in struct_list.keys():
+        code += tab_char + "load_vector< {0} >(\"{1}\", \"{2}\", _{1}, xml, node);\n".format(vec_type, var_name, no_suffix)
+    elif vec_type == cpp_var_type:
+        code += tab_char + "load_vartype_vector(\"{0}\", _{0}, xml, node);\n".format(var_name)
+    else:
+        code += tab_char + "_{0} = error;\n".format(var_name)
+        print ("暂不支持容器嵌套，请使用节点嵌套！！！ vector:", var_name)
     return code
 
 def create_load_var_code(objects, tab_char):
@@ -269,16 +311,20 @@ def create_load_var_code(objects, tab_char):
                 code += tab_char + "\t_{0} = xml.node_attribute(node, \"{0}\");\n".format(var_name)
     return code
 
+
+'''
+从根节点开始，逐层 解析每个元素 struct var
 #objcets = { "struct":{ "struct_name":{} }, "var":{"var_name":"type_name"} }
 #objects = { "struct":{}, "var":{} }
-def parse_node(node, objects):
+'''
+def parse_node(node, objects): # node:当前节点 objects:
     struct_list = objects["struct"]
     var_list = objects["var"]
-    for name, value in node.attribute.items():
+    for name, value in node.attributes.items(): 
         var_list[name] = cpp_var_type
     for sub_node in node.childNodes:
-        if sub_node.nodeType == sub_node.ELEMENT_NODE:
-            var_name = var_type = sub_node.sub_nodeName
+        if sub_node.nodeType == sub_node.ELEMENT_NODE: # 判断是否是元素节点
+            var_name = var_type = sub_node.nodeName
             if sub_node.nodeName == "vector":
                 var_name = sub_node.getAttribute("var")
                 if var_name == "":
@@ -288,31 +334,32 @@ def parse_node(node, objects):
                     var_type = "std::vector< {0}{1} >".format(container_type, struct_name_suffix)
                 else:
                     var_type = "std::vector< {0} >".format(container_type)
-                elif sub_node.nodeName == "map":
-                    var_name = sub_node.getAttribute("var")
-                    if var_name == "":
-                        continue
-                    if keyname == "":
-                        continue # map 必须显示声明keyname, 否则忽略这个节点
-                    container_type = get_container_type(sub_node, struct_list)
-                    if container_type in struct_list.keys():
-                        var_type = "std::map< {0}, {1}{2} >".format(cpp_var_type, container_type, struct_name_suffix)
-                    else:
-                        var_type = "std::map< {0}, {1} >".format(cpp_var_type, container_type)
+            elif sub_node.nodeName == "map":
+                var_name = sub_node.getAttribute("var")
+                if var_name == "":
+                    continue
+                keyname = sub_node.getAttribute("key")
+                if keyname == "":
+                    continue # map 必须显示声明keyname, 否则忽略这个节点
+                container_type = get_container_type(sub_node, struct_list)
+                if container_type in struct_list.keys():
+                    var_type = "std::map< {0}, {1}{2} >".format(cpp_var_type, container_type, struct_name_suffix)
                 else:
-                    sub_objs = None
-                    if sub_node.nodeName in struct_list.keys():
-                        sub_objs = struct_list[sub_node.nodeName]
-                        parse_node(sub_node, sub_objs)
+                    var_type = "std::map< {0}, {1} >".format(cpp_var_type, container_type)
+            else:
+                sub_objs = None
+                if sub_node.nodeName in struct_list.keys():
+                    sub_objs = struct_list[sub_node.nodeName]
+                    parse_node(sub_node, sub_objs)
+                else:
+                    sub_objs = { "struct":{}, "var":{} }
+                    parse_node(sub_node, sub_objs)
+                    if len(sub_objs["var"]) > 0:
+                        struct_list[sub_node.nodeName] = sub_objs
                     else:
-                        sub_objs = { "struct":{}, "var":{} }
-                        parse_node(sub_node, sub_objs)
-                        if len(sub_objs["var"]) > 0:
-                            struct_list[sub_node.nodeName] = sub_objs
-                        else:
-                            var_type = cpp_var_type
-                if var_name not in var_list:
-                    var_list[var_name] = var_type
+                        var_type = cpp_var_type
+            if var_name not in var_list:
+                var_list[var_name] = var_type
 
 def get_container_type(node, struct_list):
     var_type = ""
@@ -350,32 +397,37 @@ def get_container_type(node, struct_list):
         var_type = cpp_var_type
     return var_type
 
+'''
+filter() 函数用于过滤序列，过滤掉不符合条件的元素，返回一个迭代器对象，如果要转换为列表，可以使用 list() 来转换。
+该接收两个参数，第一个为函数，第二个为序列，序列的每个元素作为参数传递给函数进行判，然后返回 True 或 False，最后将返回 True 的元素放到新列表中。
+'''
 def extract_xml(in_dir, out_dir):
-    files = filter(file_ext_name(".xml"), os.listdir(in_dir))
+    files = list(filter(file_ext_name(".xml"), os.listdir(in_dir)))
     files.sort()
     code = ""
     xmlfiles = []
     for fname in files:
         filename = os.path.join(in_dir, fname)
-        print "parse %s ... " % filename
+        print("parse %s ... " %filename)
         xmlname = get_file_name(filename)
         xmlfiles.append(xmlname)
-        root = xml.documentElement
+        xml = read_xml(filename) # xml文件根节点只能有一个否则加载失败
+        root = xml.documentElement 
         objects = { "struct":{}, "var":{} }
-        parse_node(root, objects)
-    co, cp = create_struct(xmlname, objects, "\t", "")
-    code += co
-    cp = "#include \"xmlconfig_define.h\"\n" + "\nnamespace {0} {{\n\n".format(namespace) + cp + "}\n\n"
-    cppfilename = os.path.join(out_dir, fname.split('.')[0] + ".cpp")
-    cppfile = file(cppfilename, "wb")
-    cppfile.write(cp)
-    cppfile.close()
-    print "OK"
-    create_define_(out_dir, code)
+        parse_node(root, objects) # 解析所有结构
+        co, cp = create_struct(xmlname, objects, "\t", "")
+        code += co
+        cp = "#include \"xmlconfig_define.h\"\n" + "\nnamespace {0} {{\n\n".format(namespace) + cp + "}\n\n"
+        cppfilename = os.path.join(out_dir, fname.split('.')[0] + ".cpp")
+        cppfile = open(cppfilename, "wb")
+        cppfile.write(cp.encode(write_coding)) # 创建每个结构体的load函数
+        cppfile.close()
+        print ("OK")
+    create_define_file(out_dir, code) # 创建结构体定义文件
     create_code(out_dir, xmlfiles)
 
 #格式化异常信息
-def format_exception(etype, value, tb, limit=None):
+def format_exception(etype, value, tb, limit=None, logname=None):
     import traceback
     result = ['Traceback信息:']
     if not limit:
@@ -401,29 +453,49 @@ def format_exception(etype, value, tb, limit=None):
         tb = tb.tb_next
         n += 1
     result.append(' '.join(traceback.format_exception_only(etype, value)))
+    print ("程序出现异常:")
+
+    if not logname is None:
+        try:
+            logfile = open(logname, "w") # logname 为 None 会报错 UnboundLocalError: local variable 'logfile' referenced before assignment
+            logfile.write('\n'.join(result))
+        finally:
+            if not logfile is None:
+                logfile.close()
     return result
+
+def format_exc(*exc_info):
+    import traceback
+    traceback.print_exc(file=sys.stdout)
+    try:
+        logfile = open("except.log", "w")
+        traceback.print_exception(*exc_info, file=logfile)
+    finally:
+        if not logfile is None:
+            logfile.close()
 
 def schedule(in_dir, out_dir):
     try:
         extract_xml(in_dir, out_dir)
     except:
-        print "程序出现异常"
-        traceInfo = format_exception(*sys.exc_info())
-        try:
-            file = open("except.log", "w")
-            file.write('\n'.join(traceInfo))
-        finally:
-            file.colse()
+        format_exception(*sys.exc_info(), logname="except.log")
+        format_exc(*sys.exc_info())
     finally:
-        print "create C++ code from files xml... OK"
+        print ("create C++ code from files xml... OK")
 
+
+''' 
+python *.py '-h -o file --help --output=out file1 file2'
+opts：[('-h', ''), ('-o', 'file'), ('--help', ''), ('--output', 'out')]
+args：['file1', 'file2']
+'''
 def main():
-    reload(sys)
-    sys.setdefaultencoding("utf-8")
+    # reload(sys) python3 无需重新加载编码 默认无 unicode importlib.reload(sys)
+    # sys.setdefaultencoding(write_coding)
     try:
         opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "in_dir=", "out_dir="])
-    except getopt.GetoptError, err:
-        print str(err)
+    except getopt.GetoptError as err:
+        print(str(err))
         sys.exit(2)
     in_dir = "."
     out_dir = "."
@@ -432,18 +504,18 @@ def main():
             usage()
             sys.exit()
         elif o == "--in_dir":
-            in_dir = o
-        elif p == "--out_dir":
-            out_dir = o
+            in_dir = a
+        elif o == "--out_dir":
+            out_dir = a
         else:
             assert False, "未作处理"
     try:
-        schedule(in_dir, out_dir)
-    except Exception e:
-        print str(e)
+       schedule(in_dir, out_dir)
+    except Exception as e:
+       print(str(e))
 
 def usage():
-    print "\n\t--in_dir:xml文件目录\n\t--out_dir:输出生成代码目录"
+    print("\n\t--in_dir:xml文件目录\n\t--out_dir:输出生成代码目录")
 
 if __name__ == "__main__":
     main()
