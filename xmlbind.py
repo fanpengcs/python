@@ -9,7 +9,7 @@ field_name_row = 0
 var_name_row = 1
 type_name_row = 2
 data_begin_row = 3
-namespace = "xmlConfig"
+namespace = "XmlConfig"
 struct_name_suffix = "_t"
 cpp_var_type = "Fir::VarType"
 cpp_xmlparser_no_const = "Fir::XMLParser"
@@ -56,9 +56,7 @@ def read_xml(fname):
     except:
         charset = write_coding
     try:
-        print(content)
         content = content.decode(charset.upper())
-        print(content)
     except:
         if charset.upper() != write_coding:
             print("detect%s猜测解码失败,默认尝试%s解码" %(detect(content), write_coding))
@@ -68,7 +66,7 @@ def read_xml(fname):
 def create_load_vector_func(tab_char):
     code = ""
     code += tab_char + "template <typename T>\n"
-    code += tab_char + "void load_vector(std::string vec_name, std::string sub_nodename, std::vector<T> &var, {0} &xml, {1} *node {{\n".format(cpp_xmlparser, cpp_xmlparser_node)
+    code += tab_char + "void load_vector(std::string vec_name, std::string sub_nodename, std::vector<T> &var, {0} &xml, {1} *node) {{\n".format(cpp_xmlparser, cpp_xmlparser_node)
     code += tab_char + "\t{0} *vec_node = xml.child(node, \"vector\");\n".format(cpp_xmlparser_node)
     code += tab_char + "\twhile (vec_node) {\n"
     code += tab_char + "\t\tif (xml.node_attribute(vec_node, \"var\") == vec_name) {\n"
@@ -131,10 +129,10 @@ def create_code(out_dir, xmlfiles):
         func_declare += "\tconst {0}{1} &{0}();\n".format(xmlname, struct_name_suffix)
         func_declare += "\tbool reset{0}(const {1}::ReadXmlFunc &func);\n\n".format(xmlname, namespace)
         struct_declare += "\tstatic {0}{1} *_{0} = NULL;\n".format(xmlname, struct_name_suffix)
-        func_define += "\tconst {0}{1} &{0}() {{\n\t\treturn *_{0};\n\t}}\n".format(xmlname, struct_name_suffix)
-        func_define += "\tbool reset{0}(const {1}::ReadXmlFunc &func) {{\n\t\t{2} xml;\n\t\tif (_{0}) {{\n\t\t\tdelete _{0};\n\t\t\t_{0} = NULL;\n\t\t_{0} = new {0}{3};\n\t\t_{0}->load(xml, \"{0}.xml\"));\n\t\tZebra::logger->debug(\"[XML配置] 加载 {0}.xml 成功\");\n\t\treturn true;\n\t}}\n\n".format(xmlname, namespace, cpp_xmlparser_no_const, struct_name_suffix)
-        struct_load += "\t\tif (_{0}) {{\n\t\tdelete _{0};\n\t\t\t_{0} = NULL;\n\t\t}}\n\t\t_{0} = new {0}{1};\n\t\t_{0}->load(xml, func(xml, \"{0}.xml\"));\n\t\tZerbra::logger->debug(\"[XML配置], 加载 {0}.xml 成功\");\n".format(xmlname, struct_name_suffix)
-        struct_load += "\t\tfileResetMap.insert(std::make_pair(\"{0}\", reset{0});\n".format(xmlname)
+        func_define += "\tconst {0}{1} &{0}() {{\n\t\tif (NULL == _{0})\n\t\t{{\n\t\t\tzLogger::debug(\"[XML配置], 加载 ExampleSecond.xml 未初始化\");\n\t\t\t_{0} = new {0}{1}();\n\t\t}}\n\t\treturn *_{0};\n\t}}\n".format(xmlname, struct_name_suffix)
+        func_define += "\tbool reset{0}(const {1}::ReadXmlFunc &func) {{\n\t\t{2} xml;\n\t\tif (_{0}) {{\n\t\t\tdelete _{0};\n\t\t\t_{0} = NULL;\n\t\t}}\n\t\t_{0} = new {0}{3};\n\t\t_{0}->load(xml, func(xml, \"{0}.xml\"));\n\t\tzLogger::debug(\"[XML配置] 加载 {0}.xml 成功\");\n\t\treturn true;\n\t}}\n\n".format(xmlname, namespace, cpp_xmlparser_no_const, struct_name_suffix)
+        struct_load += "\t\tif (_{0}) {{\n\t\tdelete _{0};\n\t\t\t_{0} = NULL;\n\t\t}}\n\t\t_{0} = new {0}{1};\n\t\t_{0}->load(xml, func(xml, \"{0}.xml\"));\n\t\tzLogger::debug(\"[XML配置], 加载 {0}.xml 成功\");\n".format(xmlname, struct_name_suffix)
+        struct_load += "\t\tfileResetMap.insert(std::make_pair(\"{0}\", reset{0}));\n".format(xmlname)
     # 生成.h
     code = ""
     code += "#ifndef __XML_CONFIG_H__\n"
@@ -144,8 +142,8 @@ def create_code(out_dir, xmlfiles):
     code += "\n"
     code += "namespace {0} {{\n\n".format(namespace)
     code += "\ttypedef std::function<{0} *({1} &, const char *)>\tReadXmlFunc;\n\n".format(cpp_xmlparser_node, cpp_xmlparser_no_const)
-    code += "\tbool exisConfig(const std::string &fileName);\n\n"
-    code += "\tbool loadConfig(const std::string &fileName, const config::ReadXmlFunc &fun);\n\n"
+    code += "\tbool existConfig(const std::string &fileName);\n\n"
+    code += "\tbool loadConfig(const std::string &fileName, const {0}::ReadXmlFunc &fun);\n\n".format(namespace)
     code += "\tvoid init(const {0}::ReadXmlFunc &func);\n\n".format(namespace)
     code += func_declare
     code += "}\n\n"
@@ -157,19 +155,18 @@ def create_code(out_dir, xmlfiles):
 
     # 生成cpp
     code = ""
-    code += "#incldue \"xmlconfig.h\"\n"
-    code += "#include \"Zebra.h\"\n"
+    code += "#include \"xmlconfig.h\"\n"
+    code += "#include \"zLogger.h\"\n"
     code += "\n"
     code += "namespace {0} {{\n\n".format(namespace)
-    code += "\tstatic std::map<std::string, bool (*)(const config::ReadXmlFunc &)> fileResetMap = std::map<std::string, bool (*) (const config::ReadXmlFunc &)>();\n\n"
+    code += "\tstatic std::map<std::string, bool (*)(const {0}::ReadXmlFunc &)> fileResetMap = std::map<std::string, bool (*) (const {0}::ReadXmlFunc &)>();\n\n".format(namespace)
     code += struct_declare
     code += "\n"
     code += "\tbool existConfig(const std::string &fileName) {\n"
     code += "\t\treturn fileResetMap.find(fileName) != fileResetMap.end();\n"
     code += "\t}\n"
     code += "\n"
-    code += "\tbool loadConfig(const std::string &fileName, const config::ReadXmlFunc *func)"
-    code += "\t{\n"
+    code += "\tbool loadConfig(const std::string &fileName, const {0}::ReadXmlFunc &func) {{\n".format(namespace)
     code += "\t\tconst auto iter = fileResetMap.find(fileName);\n"
     code += "\t\tif (iter != fileResetMap.end())\n"
     code += "\t\t\treturn iter->second(func);\n"
@@ -516,6 +513,7 @@ def main():
 
 def usage():
     print("\n\t--in_dir:xml文件目录\n\t--out_dir:输出生成代码目录")
+    print(r'eg: python .\python\xmlbind.py --in_dir="Config\" --out_dir="Config\"')
 
 if __name__ == "__main__":
     main()
