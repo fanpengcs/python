@@ -67,6 +67,7 @@ def create_load_vector_func(tab_char):
     code = ""
     code += tab_char + "template <typename T>\n"
     code += tab_char + "void load_vector(std::string vec_name, std::string sub_nodename, std::vector<T> &var, {0} &xml, {1} *node) {{\n".format(cpp_xmlparser, cpp_xmlparser_node)
+    code += tab_char + "\tif (NULL == node) return;\n"
     code += tab_char + "\t{0} *vec_node = xml.child(node, \"vector\");\n".format(cpp_xmlparser_node)
     code += tab_char + "\twhile (vec_node) {\n"
     code += tab_char + "\t\tif (xml.node_attribute(vec_node, \"var\") == vec_name) {\n"
@@ -83,22 +84,21 @@ def create_load_vector_func(tab_char):
     code += tab_char + "\t\tvec_node = xml.next(vec_node, \"vector\");\n"
     code += tab_char + "\t}\n"
     code += tab_char + "}\n\n"
-    code += "#if 0\n"
-    code += tab_char + "static void load_vartype_vector(std::string vec_name, std::vector<{0}> &var, {1} &xml, {2} *node) {{\n".format(cpp_var_type, cpp_xmlparser, cpp_xmlparser_no_const)
+    code += tab_char + "static void load_vartype_vector(std::string vec_name, std::vector<{0}> &var, {1} &xml, {2} *node) {{\n".format(cpp_var_type, cpp_xmlparser, cpp_xmlparser_node)
+    code += tab_char + "\tif (NULL == node) return;\n"
     code += tab_char + "\t{0} *vec_node = xml.child(node, \"vector\");\n".format(cpp_xmlparser_node)
     code += tab_char + "\twhile (vec_node) {\n"
     code += tab_char + "\t\tif (xml.node_attribute(vec_node, \"var\") == vec_name) {\n"
     code += tab_char + "\t\t\t{0} *sub_node = xml.child(vec_node, NULL);\n".format(cpp_xmlparser_node)
     code += tab_char + "\t\t\twhile (sub_node) { \n"
     code += tab_char + "\t\t\t\tvar.push_back(xml.node_value(sub_node));\n"
-    code += tab_char + "\t\t\t\tsub_node = node.next(sub_node, NULL);\n"
+    code += tab_char + "\t\t\t\tsub_node = xml.next(sub_node, NULL);\n"
     code += tab_char + "\t\t\t}\n"
     code += tab_char + "\t\t\tbreak;"
     code += tab_char + "\t\t}\n"
     code += tab_char + "\t\tvec_node = xml.next(vec_node, \"vector\");\n"
     code += tab_char + "\t}\n"
-    code += tab_char + "}\n"
-    code += "#endif\n\n"
+    code += tab_char + "}\n\n"
     return code
 
 def create_define_file(out_dir, struct_code):
@@ -304,8 +304,10 @@ def create_load_var_code(objects, tab_char):
                 code += tab_char + "\t{0} *sub = xml.child(node, \"{1}\");\n".format(cpp_xmlparser_node, var_name)
                 code += tab_char + "\tif (sub)\n"
                 code += tab_char + "\t\t_{0} = xml.node_value(sub);\n".format(var_name)
-                code += tab_char + "} else\n"
+                code += tab_char + "}\n"
+                code += tab_char + "else {\n"
                 code += tab_char + "\t_{0} = xml.node_attribute(node, \"{0}\");\n".format(var_name)
+                code += tab_char + "}\n"
     return code
 
 
