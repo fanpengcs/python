@@ -1,6 +1,0 @@
-Traceback–≈œ¢:
-File d:\pythonVscode\python\xmlbind.py, line 449, in schedule
-(Info:%s)
-File d:\pythonVscode\python\xmlbind.py, line 395, in extract_xml
-(Info:%s)
-UnboundLocalError: local variable 'xmlname' referenced before assignment
