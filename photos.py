@@ -50,7 +50,7 @@ class Extract():
             #去除保存
             do_a = []
             if self.save_urls.save_num == 0:
-                do_a = all_a[]
+                do_a = all_a
             else:
                 for a_item in all_a:
                     if a_item['href'] in self.save_urls.save_urls:

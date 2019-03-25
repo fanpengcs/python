@@ -3,6 +3,15 @@
 import sys
 from PIL import Image
 import matplotlib.pyplot as plt
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+
+def xrange(x, y):
+    #vec = 1 if y>=x else -1
+    if y >= x:
+        return range(x, y+1)
+    else:
+        return range(y, x+1)
 
 class TailRecurseException(Exception):
     def __init__(self, args, kwargs):
@@ -38,7 +47,7 @@ class PhotoData(object):
     im_path = r'D:\pythonVscode\test.bmp'
     out_path = r'D:\pythonVscode\test_out.bmp'
     check_rgb = 255
-    dir = [[-1, 0], [0, -1], [1, 0], [ 0, 1]]
+    dir = [[-1, 0], [-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [ 0, 1], [-1, 1]]
 
     class DataItem(object):
         def __init__(self):
@@ -55,15 +64,52 @@ class PhotoData(object):
         self.out_img = Image.new('RGB', self.src_img.size, (255, 255, 255))
         self.w = self.src_img.size[0]
         self.h = self.src_img.size[1]
-        self.src_data = [([0] * self.h) for i in range(self.w)]
+        self.src_data = [([0] * self.w) for i in range(self.h)]
         for i in range(0, self.w):
             for j in range(0, self.h):
                 data = self.DataItem()
                 data.pixData = self.src_img.getpixel((i,j))
                 data.check = 0
-                self.src_data[i][j] = data
+                self.src_data[j][i] = data
         self.data_list = list() # 矩阵存储
         self.src_list = list() # list存储
+        self.executor = ThreadPoolExecutor(max_workers=20)
+
+    #@tail_call_optimized
+    def getCurve(self, x, y, curve, curve_list):
+        if False == self.IsValid(x, y):
+            return False
+        elif self.src_data[y][x].check == 1:
+            return False
+        self.src_data[y][x].check = 1
+        if False == self.checkRGB(self.src_data[y][x].pixData):
+            return False
+        else:
+            for index in range(0, len(self.dir)):
+                next_x = x + self.dir[index][0]
+                next_y = y + self.dir[index][1]
+                self.getCurve(next_x, next_y, curve, curve_list)
+            curve[y][x] = self.src_data[y][x]
+            curve_list.append(self.PosDataItem(self.src_data[y][x], [x,y]))
+        return True
+
+    def getCurveBegin(self):
+        for i in range(0, self.w):
+            for j in range(0, self.h):
+                curve = None
+                curve_list = None
+                if None == curve:
+                    curve = [([0] * self.w) for x in range(self.h)]
+                if None == curve_list:
+                    curve_list = list()
+                if (True == self.getCurve(i, j, curve, curve_list)):
+                    self.data_list.append(curve)
+                    self.src_list.append(curve_list)
+
+    def checkRGB(self, data):
+        if (data[0] >= PhotoData.check_rgb and data[1] >= PhotoData.check_rgb and data[2] >= PhotoData.check_rgb):
+            return True
+        return False
 
     def IsValid(self, x, y):
         if x < 0 or y < 0:
@@ -87,40 +133,48 @@ class PhotoData(object):
                         ret[3] = y
         return ret
 
+    def doImageItem(self, x, y, curve_list, rec):
+        intersect0 = [0]
+        intersectSing = [0]
+        intersectDual = [0]
+        for borderPos in xrange(rec[0], rec[1]):
+            self.checkLinePos(curve_list, [x,y], [borderPos, 0], intersect0, intersectSing, intersectDual)
+            self.checkLinePos(curve_list, [x,y], [borderPos, rec[3]-1], intersect0, intersectSing, intersectDual)
+        for borderPos in xrange(rec[2], rec[3]):
+            self.checkLinePos(curve_list, [x,y], [rec[1]-1, borderPos], intersect0, intersectSing, intersectDual)
+            self.checkLinePos(curve_list, [x,y], [0, borderPos], intersect0, intersectSing, intersectDual)
+        if intersect0[0] == 0 and intersectSing[0] == 0 and intersectDual[0] == 0:
+            return
+        elif intersect0[0] >= intersectSing[0] and intersect0[0] >= intersectDual[0]:# 超过十个点没有误差
+            return
+        elif intersectSing[0] < intersectDual[0]:
+            return
+        else:
+            self.out_img.putpixel((x,y), self.src_data[y][x].pixData)
+        print(sys._getframe().f_code.co_name, x, y, intersect0[0], intersectSing[0], intersectDual[0])
+
     def doImage(self):
+        #print(sys._getframe().f_code.co_name)
         for index in range(len(self.data_list)):
             curve = self.data_list[index]
             curve_list = self.src_list[index]
             rec = self.getBorderRect(curve)
-            for x in range(rec[0], rec[1]):
-                for y in range(rec[2], rec[3]):
+            for x in xrange(rec[0], rec[1]):
+                for y in xrange(rec[2], rec[3]):
                     '''
                     交点为0:出现一个交点为零，在曲线外；
                     交点为单数：多数交点为单数，在曲线内；多数交点为双数，在曲线外
                     '''
-                    intersect0 = [0]
-                    intersectSing = [0]
-                    intersectDual = [0]
-                    for borderPos in range(rec[0], rec[1]):
-                        self.checkLinePos(curve_list, [x,y], [borderPos, 0], intersect0, intersectSing, intersectDual)
-                        self.checkLinePos(curve_list, [x,y], [borderPos, rec[3]-1], intersect0, intersectSing, intersectSing)
-                    for borderPos in range(rec[2], rec[3]):
-                        self.checkLinePos(curve_list, [x,y], [rec[1]-1, borderPos], intersect0, intersectSing, intersectDual)
-                        self.checkLinePos(curve_list, [x,y], [0, borderPos], intersect0, intersectSing, intersectDual)
-                    if intersect0[0] == 0 and intersectSing[0] == 0 and intersectDual[0] == 0:
-                        continue
-                    elif intersect0[0] > 10:# 超过十个点没有误差
-                        continue
-                    elif intersectSing[0] > intersectDual[0]:
-                        continue
-                    else:
-                        self.out_img.putpixel((x,y), curve[x][y].pixData)
+                    self.doImageItem(x, y, curve_list, rec)
+                    self.executor.submit(self.doImageItem, x, y, curve_list, rec)
         self.out_img.save(self.out_path)
         plt.figure(self.out_path)
         plt.imshow(self.out_img)
         plt.show()
 
     def isAdjacent(self, posl, posr):
+        if posl is None or posr is None:
+            return False
         if abs(posl[0]-posr[0]) <= 1 and abs(posl[1]-posr[1]) <= 1:
             return True
         return False
@@ -132,15 +186,15 @@ class PhotoData(object):
         if (posl[0] == posr[0] and posl[1] == posr[1]):
             return ret
         elif posl[0] == posr[0]:
-            for y in range(posl[1], posr[1]+1):
+            for y in xrange(posl[1], posr[1]):
                 ret.append((posl[0],y))
         else:
-            for x in range(posl[0], posr[0]+1):
+            for x in xrange(posl[0], posr[0]):
                 if posl[1] == posr[1]:
                     ret.append((x,posl[1]))
                 else:
                     y = (x - posl[0]) / (posr[0] - posl[0]) * (posr[1] - posl[1]) + posl[1]
-                    ret.append((x,y))
+                    ret.append((x, round(y)))
         return ret
 
     def checkOnLine(self, curve_list, pos):
@@ -158,62 +212,26 @@ class PhotoData(object):
         last_pos = None
         for index in range(len(ret)):
             if True == self.checkOnLine(curve_list, ret[index]):
-                last_pos = ret[index]
                 if False == self.isAdjacent(last_pos, ret[index]):
                     intersect.append(ret[index])
+                last_pos = ret[index]
         if len(intersect) == 0:
             intersect0[0] += 1
-        elif len % 2 != 0:
+        elif len(intersect) % 2 != 0:
             intersectSing[0] += 1
         else:
             intersectDual[0] += 1
+        #print(sys._getframe().f_code.co_name, posl, posr, intersect0[0], intersectSing[0], intersectDual[0])
         return
-
-    #@tail_call_optimized
-    def getCurve(self, x, y, curve, curve_list):
-        if False == self.IsValid(x, y):
-            return False
-        elif self.src_data[x][y].check == 1:
-            return False
-        self.src_data[x][y].check = 1
-        if False == self.checkRGB(self.src_data[x][y].pixData):
-            return False
-        else:
-            for index in range(0, len(self.dir)):
-                next_x = x + self.dir[index][0]
-                next_y = y + self.dir[index][1]
-                self.getCurve(next_x, next_y, curve, curve_list)
-            #if curve is None:
-            #    curve = [([0] * self.h) for i in range(self.w)]
-            #if curve_list is None:
-            #    curve_list = list()
-            curve[x][y] = self.src_data[x][y]
-            curve_list.append(self.PosDataItem(self.src_data[x][y], [x,y]))
-        return True
-
-    def getCurveBegin(self):
-        for i in range(0, self.w):
-            for j in range(0, self.h):
-                curve = [([0] * self.h) for i in range(self.w)]
-                curve_list = list()
-                if (True == self.getCurve(i, j, curve, curve_list)):
-                    self.data_list.append(curve)
-                    self.src_list.append(curve_list)
-
-    def checkRGB(self, data):
-        if (data[0] >= PhotoData.check_rgb and data[1] >= PhotoData.check_rgb and data[2] >= PhotoData.check_rgb):
-            return True
-        return False
 
 def main():
     sys.setrecursionlimit(1000000) # modify the value of the recursion depth
-#    try:
+    #try:
     photo = PhotoData()
     photo.getCurveBegin()
     photo.doImage()
-#    except Exception as err:
-#        print(err, err.)
-#        pass
+    #except Exception as err:
+    #    print(err, err)
 
 if __name__ == '__main__':
     main()
