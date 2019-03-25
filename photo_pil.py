@@ -42,8 +42,13 @@ class PhotoData(object):
 
     class DataItem(object):
         def __init__(self):
-            pixData = [0,0,0]
-            check = 0 # 1 :白色区域
+            self.pixData = [0,0,0]
+            self.check = 0 # 1 :白色区域
+    
+    class PosDataItem(object):
+        def __init__(self, dataItem, pos):
+            self.dataItem = dataItem
+            self.posData = pos
 
     def __init__(self):
         self.src_img = Image.open(PhotoData.im_path)
@@ -102,9 +107,11 @@ class PhotoData(object):
                     for borderPos in range(rec[2], rec[3]):
                         self.checkLinePos(curve_list, [x,y], [rec[1]-1, borderPos], intersect0, intersectSing, intersectDual)
                         self.checkLinePos(curve_list, [x,y], [0, borderPos], intersect0, intersectSing, intersectDual)
-                    if intersect0 > 10:# 误差
+                    if intersect0[0] == 0 and intersectSing[0] == 0 and intersectDual[0] == 0:
                         continue
-                    elif intersectSing > intersectDual:
+                    elif intersect0[0] > 10:# 超过十个点没有误差
+                        continue
+                    elif intersectSing[0] > intersectDual[0]:
                         continue
                     else:
                         self.out_img.putpixel((x,y), curve[x][y].pixData)
@@ -122,23 +129,30 @@ class PhotoData(object):
     # y = kx + b
     def getLineAllPos(self, posl, posr):
         ret = list()
-        x1 = posl[0]
-        y1 = posl[1]
-        x2 = posr[0]
-        y2 = posr[1]
-        for x in range(posl[0], posr[0]+1):
-            y = (x - x1) / (x2 - x1) * (y2 - y1) + y1
-            ret.append((x,y))
+        if (posl[0] == posr[0] and posl[1] == posr[1]):
+            return ret
+        elif posl[0] == posr[0]:
+            for y in range(posl[1], posr[1]+1):
+                ret.append((posl[0],y))
+        else:
+            for x in range(posl[0], posr[0]+1):
+                if posl[1] == posr[1]:
+                    ret.append((x,posl[1]))
+                else:
+                    y = (x - posl[0]) / (posr[0] - posl[0]) * (posr[1] - posl[1]) + posl[1]
+                    ret.append((x,y))
         return ret
 
     def checkOnLine(self, curve_list, pos):
         for index in range(len(curve_list)):
-            if pos[0] == curve_list[index][0] and pos[1] == curve_list[index][1]:
+            if pos[0] == curve_list[index].posData[0] and pos[1] == curve_list[index].posData[1]:
                 return True
         return False
 
     # 根据交点的个数判断和曲线关系，相邻交点只算一个
     def checkLinePos(self, curve_list, posl, posr, intersect0, intersectSing, intersectDual):
+        if (posl[0] == posr[0] and posl[1] == posr[1]):
+            return
         ret = self.getLineAllPos(posl, posr)
         intersect = list()
         last_pos = None
@@ -153,7 +167,7 @@ class PhotoData(object):
             intersectSing[0] += 1
         else:
             intersectDual[0] += 1
-        pass
+        return
 
     #@tail_call_optimized
     def getCurve(self, x, y, curve, curve_list):
@@ -162,26 +176,26 @@ class PhotoData(object):
         elif self.src_data[x][y].check == 1:
             return False
         self.src_data[x][y].check = 1
-        if self.checkRGB(self.src_data[x][y].pixData):
+        if False == self.checkRGB(self.src_data[x][y].pixData):
             return False
         else:
             for index in range(0, len(self.dir)):
                 next_x = x + self.dir[index][0]
                 next_y = y + self.dir[index][1]
                 self.getCurve(next_x, next_y, curve, curve_list)
-            if curve is None:
-                curve = [([0] * self.h) for i in range(self.w)]
-            if curve_list is None:
-                curve_list = list()
+            #if curve is None:
+            #    curve = [([0] * self.h) for i in range(self.w)]
+            #if curve_list is None:
+            #    curve_list = list()
             curve[x][y] = self.src_data[x][y]
-            curve_list.append(self.src_data[x][y])
+            curve_list.append(self.PosDataItem(self.src_data[x][y], [x,y]))
         return True
 
     def getCurveBegin(self):
         for i in range(0, self.w):
             for j in range(0, self.h):
-                curve = None
-                curve_list = None
+                curve = [([0] * self.h) for i in range(self.w)]
+                curve_list = list()
                 if (True == self.getCurve(i, j, curve, curve_list)):
                     self.data_list.append(curve)
                     self.src_list.append(curve_list)
