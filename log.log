@@ -1,0 +1,5 @@
+2019-07-12 22:12:29,039 - d:\github\python\my_log.py[line:35] - DEBUG: debug
+2019-07-12 22:12:29,041 - d:\github\python\my_log.py[line:36] - INFO: info
+2019-07-12 22:12:29,041 - d:\github\python\my_log.py[line:37] - WARNING: 警告
+2019-07-12 22:12:29,043 - d:\github\python\my_log.py[line:38] - ERROR: 报错
+2019-07-12 22:12:29,045 - d:\github\python\my_log.py[line:39] - CRITICAL: 严重
