@@ -32,7 +32,7 @@ class Extract():
         log_path += '\\extract.log'
         self.log = my_log.Logger(log_path, "debug")
         #初始化线程池
-        self.executor = ThreadPoolExecutor(max_workers=20)
+        self.executor = ThreadPoolExecutor(max_workers=10)
         #加载以保存url
         self.save_urls = self.__class__.SaveItem()
         try:
@@ -137,7 +137,7 @@ def main():
             pickle.dump(saves, save)
             save.close()
             extract.log.logger.debug("done save save_last")
-        #input('Press the enter key to exit.')
+        input('Press the enter key to exit.')
 
 if __name__ == "__main__":
     main()
