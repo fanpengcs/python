@@ -7,6 +7,10 @@
 	<version2>10000:10003</version2>
 
 	<structItem item1="你好" item2="hello">
+		<map var="exampleMap" key="itemid">
+			<item itemid="5" itemvar1="7" itemvar2="ma|11100:mb|22200:mc|33300"/>
+			<item itemid="6" itemvar1="8" itemvar2="11101|ma:22201|mb:33301|mc"/>
+		</map>
 	</structItem>
   
 	<structName var1="10001.00" var2="10002.01">
