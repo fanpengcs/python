@@ -496,8 +496,8 @@ def main():
     except getopt.GetoptError as err:
         print(str(err))
         sys.exit(2)
-    in_dir = "."
-    out_dir = "."
+    in_dir = ".\python"
+    out_dir = ".\python"
     for o, a in opts:
         if o in ['-h', "--help"]:
             usage()

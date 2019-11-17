@@ -13,6 +13,9 @@ namespace XmlConfig {
 
 	void init(const XmlConfig::ReadXmlFunc &func);
 
+	const example_t &example();
+	bool resetexample(const XmlConfig::ReadXmlFunc &func);
+
 }
 
 #endif
