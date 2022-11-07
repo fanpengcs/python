@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*- 
+
+#python2
 
 from PIL import Image
 from PIL import ImageFilter
@@ -58,7 +61,7 @@ def ocr_question_extract(im):
   try:
     import pytesseract
   except:
-    print "[ERROR] pytesseract not installed"
+    print ("[ERROR] pytesseract not installed")
     return
   im = im.crop((127, 3, 260, 22))
   im = pre_ocr_processing(im)
@@ -93,7 +96,7 @@ def binarize(im, thresh=120):
 if __name__ == '__main__':
   im = get_img()
   #im = Image.open("./tmp.jpg")
-  print 'OCR Question:', ocr_question_extract(im)
+  print ('OCR Question:', ocr_question_extract(im))
   for y in range(2):
     for x in range(4):
       im2 = get_sub_img(im, x, y)

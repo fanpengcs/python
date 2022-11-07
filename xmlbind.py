@@ -2,7 +2,7 @@
 #_*_coding:utf_8_*_
 
 from xml.dom import minidom
-import xlrd, os, sys, re, getopt
+import os, sys, re, getopt
 from chardet import detect
 
 field_name_row = 0
