@@ -276,17 +276,6 @@ def refactor(diff_data, coverage_data):
                         coverage_info.DAs.insert(tmp_add_line_index, add)
     return coverage_data_out
 
-    # def clear(self):
-    #     self.TN = ""  # 测试用例名称
-    #     self.SF = ""  # 源码文件路径
-    #     self.FNs = {}  # 函数名及行号
-    #     self.FNDAs = {}  # 函数名及执行次数
-    #     self.FNF = 0  # 函数总数
-    #     self.FNH = 0  # 函数执行数
-    #     self.DAs = []  # 代码行及执行次数
-    #     self.LF = 0  # 代码总行数
-    #     self.LH = 0  # 代码执行行数
-
 
 def create_coverage_info(coverage_data, filename):
     """输出到文件"""
