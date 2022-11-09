@@ -1,0 +1,76 @@
+Index: TestTools/test_game/ProtoLua/Net_Connect.lua
+===================================================================
+--- TestTools/test_game/ProtoLua/Net_Connect.lua	(revision 0)
++++ TestTools/test_game/ProtoLua/Net_Connect.lua	(revision 4987)
+@@ -0,0 +1,17 @@
++
++require 'TestGame'
++local req = MTTDProto.Cmd_Net_Connect_CS()
++req.iAccountId = 10001
++req.sSessionKey = "x7vPoDJ/FcYVIWnI4PJRk6kKN7LNMRGC5Ng1CMzx/8LSl2KZ1r5iMAI="
++req.iZoneId = 20
++req.iReconnectNum = 0
++req.sClientVersion = "1.1.0.1.0"
++req.iActivityPushVersion = 0
++req.iOSType = 0
++req.sProxyAddr = ""
++req.iEchoTimeMS = 0
++req.sClientIp = ""
++req.sChannel = ""
++req.sDeviceId = ""
++
++dogameAndPrint(req, global_gow_account_id)
+Index: TestTools/test_game_batch/test_game_batch
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/x-executable
+Index: TestTools/test_game_batch/test_game_batch
+===================================================================
+--- TestTools/test_game_batch/test_game_batch	(revision 4974)
++++ TestTools/test_game_batch/test_game_batch	(revision 4987)
+
+Property changes on: TestTools/test_game_batch/test_game_batch
+___________________________________________________________________
+Added: svn:executable
+## -0,0 +1 ##
++*
+\ No newline at end of property
+Added: svn:mime-type
+## -0,0 +1 ##
++application/x-executable
+\ No newline at end of property
+Index: TestTools/test_game_batch/test_game_batch.cpp
+===================================================================
+--- TestTools/test_game_batch/test_game_batch.cpp	(revision 4974)
++++ TestTools/test_game_batch/test_game_batch.cpp	(revision 4987)
+@@ -217,7 +217,7 @@
+ 		}
+ 
+ 		string sParams1 = "test_game_batch";
+-		string sParams2 = "env=" + m_opts["env"] + "&division=idle.zone." + UtilString::tostr(iZoneId) + "&op=gm&req=" + sGM.str() + "&timeout=2000";
++		string sParams2 = "env=" + m_opts["env"] + "&division=nova.zone." + UtilString::tostr(iZoneId) + "&op=gm&req=" + sGM.str() + "&timeout=2000";
+ 
+ 		if (iLineNum == 1)
+ 		{
+@@ -237,7 +237,7 @@
+ 		vParams[1] = (char*)sParams2.c_str();
+ 		MfwTestSuite<MTTD::GameServicePrx> test(
+ 			2, vParams, 
+-			"IDLE.GameServer.GameServiceObj",
++			"NOVA.GameServer.GameServiceObj",
+ 			"127.0.0.1", 6002);
+ 		
+ 		MTTD::GameServicePrx prx = test.proxy();
+Index: gmweb/webback/view/GmTools/yunwei.php
+===================================================================
+--- gmweb/webback/view/GmTools/yunwei.php	(revision 4974)
++++ gmweb/webback/view/GmTools/yunwei.php	(revision 4987)
+@@ -20,7 +20,7 @@
+ 
+ <?php if ($is_devel_env): ?><li><a href="index.php?mod=GmTools&act=tscan">tscan代码扫描</a></li><?php endif; ?>
+ <?php if ($is_devel_env): ?><li><a href="index.php?mod=GmTools&act=cppcheck">cppcheck代码扫描</a></li><?php endif; ?>
+-<?php if ($is_devel_env): ?><li><a href="http://10.20.18.5:8080/">服务器jenkins</a></li><?php endif; ?>
++<?php if ($is_devel_env): ?><li><a href="http://10.20.18.5:8080/" target="_blank">服务器jenkins</a></li><?php endif; ?>
+ <?php if ($is_devel_env): ?><li><a href="http://cdn.nova.oa.mt:8095/">客户端cdn</a></li><?php endif; ?>
+ 
+ </body>

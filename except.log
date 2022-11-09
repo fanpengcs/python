@@ -1,6 +1,7 @@
 Traceback (most recent call last):
-  File "d:/GitHub/python/xmlbind.py", line 478, in schedule
-    extract_xml(in_dir, out_dir)
-  File "d:/GitHub/python/xmlbind.py", line 404, in extract_xml
-    files = list(filter(file_ext_name(".xml"), os.listdir(in_dir)))
-WindowsError: [Error 3] : '.\\python\\*.*'
+  File "E:\Github\python\coverage.py", line 327, in schedule
+    create_coverage_info(new_coverage, filename)
+  File "E:\Github\python\coverage.py", line 299, in create_coverage_info
+    out_data += f"TN:{item_data.TN}\n"
+                      ^^^^^^^^^^^^
+AttributeError: type object 'CoverageData' has no attribute 'TN'

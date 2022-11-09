@@ -1,12 +1,32 @@
+import math as MH
 import re
 
-import math as MH
+#content = r'<?xml version="1.0" encoding="GB2312"?>'
+#charset = re.compile(".*\s*encoding=\"([^\"]+)\".*", re.M).match(content)
 
-content = r'<?xml version="1.0" encoding="GB2312"?>'
-charset = re.compile(".*\s*encoding=\"([^\"]+)\".*", re.M).match(content)
+#content = r'Index: TestTools/test_game/ProtoLua/Net_Connect.lua'
+#charset = re.compile("Index:\s(.*)", re.M).match(content)
+
+# content = r'--- TestTools/test_game/ProtoLua/Net_Connect.lua    (revision 01234)'
+# charset = re.compile("---\s.*[(]revision\s([0-9].*)[)]", re.M).match(content)
+
+# content = r'@@ -217,7 +217,7 @@'
+# charset = re.compile("@@\s-([0-9]*),([0-9]*)\s+.([0-9]*),([0-9]*)\s@@", re.M).match(content)
+
+
+# content = r'+++ TestTools/test_game/ProtoLua/Net_Connect.lua\t(revision 4987)\n'
+# charset = re.compile(r"\+\+\+\s.*[(]revision\s([0-9].*)[)]", re.M).match(content)
+
+diff_key = "test/test.cpp"
+content = '/home/fanpeng/data/test/test.cpp'
+charset = re.compile(f".*{diff_key}", re.M).match(content)
+
 
 print(charset.group(0))
-print(charset.group(1))
+# print(charset.group(1))
+# print(charset.group(2))
+# print(charset.group(3))
+# print(charset.group(4))
 # m = re.match(r'(\w+) (\w+)(?P<sign>.*)', 'hello world!')
  
 # print ("m.string:", m.string)
@@ -27,7 +47,7 @@ print(charset.group(1))
 # p = re.compile(r'(i)(\s)')
 # s = 'i say, hello world!'
 
-# ma = p.match(s)
+
 # print(ma)
 
 # se = p.search(s)
