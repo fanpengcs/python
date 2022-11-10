@@ -1,7 +1,6 @@
 #!/usr/local/bin/pyhon
 # _*_coding:utf_8_*_
 # python3
-import code
 import copy
 import fileinput
 import getopt
@@ -328,9 +327,9 @@ def main():
     global version
     file_info = r"E:\Github\python\main.info"
     file_diff = r"E:\Github\python\diff"
-    if len(sys.argv) != 3:
-        usage()
-        exit()
+    # if len(sys.argv) != 3:
+    #     usage()
+    #     exit()
     try:
         opts, args = getopt.getopt(
             sys.argv[1:], "-h-i:-d:-v", ["help", "info=", "diff=", "version"])
